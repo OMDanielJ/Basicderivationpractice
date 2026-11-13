@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reto de derivadas</title>
+<style>
+  :root{
+    --bg:#f4f3ee; --card:#ffffff; --ink:#1d1d20; --muted:#6a6a73;
+    --line:#dcdbd3; --accent:#2f5d50; --ok:#2e7d52; --bad:#b23b3b; --chip:#eef0ea;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --bg:#17181a; --card:#212327; --ink:#ececec; --muted:#a3a3ab; --line:#33353a; --chip:#2a2c31; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink);
+    font-family:Georgia,"Latin Modern Roman","Times New Roman",serif;
+    line-height:1.5; -webkit-text-size-adjust:100%;}
+  .wrap{max-width:640px; margin:0 auto; padding:20px 16px 60px}
+  h1{font-size:1.5rem; margin:.2em 0 .1em; text-align:center}
+  .sub{text-align:center; color:var(--muted); margin:0 0 18px; font-size:.95rem}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  label{display:block; font-size:.9rem; color:var(--muted); margin:10px 0 4px}
+  input[type=text]{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; background:transparent; color:var(--ink); font-size:1rem; font-family:inherit}
+  .levels{display:flex; gap:8px; margin-top:6px}
+  .levels button{flex:1; padding:10px 6px; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:10px; font-size:.95rem; cursor:pointer; font-family:inherit}
+  .levels button.sel{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .btn{display:block; width:100%; padding:13px; border:none; border-radius:11px; background:var(--accent); color:#fff; font-size:1.05rem; cursor:pointer; margin-top:16px; font-family:inherit}
+  .btn.secondary{background:transparent; color:var(--ink); border:1px solid var(--line)}
+  .err{color:var(--bad); font-size:.85rem; margin:8px 2px 0; min-height:1em; text-align:center}
+  .hud{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:.95rem; gap:6px}
+  .hud .pill{background:var(--chip); border-radius:999px; padding:5px 12px; white-space:nowrap}
+  .time{text-align:right; color:var(--muted); font-size:.8rem; margin:0 2px 10px}
+  .q-f{font-size:1.5rem; text-align:center; margin:10px 0 4px}
+  .q-label{text-align:center; color:var(--muted); font-size:.85rem; margin-top:14px}
+  .q-d{font-size:1.5rem; text-align:center; margin:4px 0 6px; padding:14px; border:1px dashed var(--line); border-radius:12px}
+  .judge{display:flex; gap:10px; margin-top:16px}
+  .judge button{flex:1; padding:15px; border:none; border-radius:12px; font-size:1.05rem; cursor:pointer; color:#fff; font-family:inherit}
+  .j-ok{background:var(--ok)} .j-bad{background:var(--bad)}
+  .banner{text-align:center; font-size:1.02rem; margin:10px 0; min-height:1.4em; font-weight:bold}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:10px}
+  .chips button{padding:9px 12px; border:1px solid var(--line); background:var(--chip); color:var(--ink); border-radius:999px; cursor:pointer; font-size:.9rem; font-family:inherit}
+  .big{font-size:2.4rem; text-align:center; margin:6px 0}
+  .muted{color:var(--muted)} .center{text-align:center}
+  sup{font-size:.7em}
+  .mono{font-variant-numeric:tabular-nums}
+  .hidden{display:none}
+  .foot{margin-top:18px; font-size:.78rem; color:var(--muted); text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- INICIO -->
+  <div id="inicio">
+    <h1>Reto de derivadas</h1>
+    <p class="sub">¿Está bien derivada? Decide correcta o incorrecta, y si es incorrecta, identifica el error. La partida termina con el primer fallo.</p>
+    <div class="card">
+      <label for="cuenta">Número de cuenta (9 dígitos)</label>
+      <input type="text" id="cuenta" inputmode="numeric" maxlength="9" placeholder="Ej. 312345678" autocomplete="off">
+      <label for="nombre">Nombre</label>
+      <input type="text" id="nombre" placeholder="Tu nombre completo" autocomplete="off">
+      <label for="grupo">Grupo</label>
+      <input type="text" id="grupo" placeholder="Tu grupo" autocomplete="off">
+      <label>Nivel</label>
+      <div class="levels" id="levels">
+        <button data-lvl="piso" class="sel">Principiante</button>
+        <button data-lvl="central">Aprendiz</button>
+        <button data-lvl="techo">Experto</button>
+      </div>
+      <p class="muted" id="lvlDesc" style="font-size:.82rem; margin:8px 2px 0">Principiante: regla de la potencia y sumas.</p>
+      <button class="btn" id="startBtn">Comenzar</button>
+      <p class="err" id="startErr"></p>
+      <p class="center muted" id="best" style="margin:6px 0 0; font-size:.9rem"></p>
+    </div>
+    <p class="foot">Ganas puntos por cada acierto, y entre más alto el nivel, más puntos. Busca alcanzar las metas de 5, 10, 15 y 20 aciertos para sumar bonos.</p>
+  </div>
+
+  <!-- JUEGO -->
+  <div id="juego" class="hidden">
+    <div class="hud">
+      <span class="pill" id="hLvl">Piso</span>
+      <span class="pill">Racha: <b id="hScore">0</b></span>
+      <span class="pill">Puntos: <b id="hPts">0</b></span>
+    </div>
+    <div class="time mono" id="hTime">0:00</div>
+    <div class="card">
+      <div class="q-f" id="qF"></div>
+      <div class="q-label">Derivada propuesta</div>
+      <div class="q-d" id="qD"></div>
+      <div class="banner" id="qBanner"></div>
+      <div class="judge" id="judge">
+        <button class="j-ok" id="bOk">Correcta</button>
+        <button class="j-bad" id="bBad">Incorrecta</button>
+      </div>
+      <div id="errStep" class="hidden">
+        <p class="center muted" style="margin:6px 0 0">¿Cuál fue el error?</p>
+        <div class="chips" id="errChips"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIN -->
+  <div id="fin" class="hidden">
+    <div class="card center">
+      <p class="muted" style="margin:0">Fin de la partida</p>
+      <div class="big" id="finPts">0</div>
+      <p class="muted" style="margin:0"><b id="finScore">0</b> aciertos · nivel <span id="finLvl"></span> · <span id="finTime" class="mono">0:00</span></p>
+      <div id="finReveal" style="margin:16px 0; text-align:left"></div>
+      <p class="center" id="sendMsg" style="font-size:.92rem; margin:6px 0 0"></p>
+      <button class="btn" id="againBtn">Jugar de nuevo</button>
+      <button class="btn secondary" id="resendBtn">Reenviar registro</button>
+    </div>
+  </div>
+
+</div>
+
+<script>// Motor de generación de reactivos de derivación con etiqueta correcto/incorrecto.
+// Cada reactivo: { nivel, fDisp, fNum, propDisp, propNum, correcto, errorTipo }
+// fNum y propNum son funciones numéricas usadas para verificación y no para el alumno.
+(function (root) {
+  "use strict";
+  function ri(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function nz(min, max) { var v = 0; while (v === 0) v = ri(min, max); return v; }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  // ---- formato de polinomios para la pantalla (coeficientes enteros) ----
+  // términos: lista de {c: coef, s: "x^2" | "x" | "" | "1/x" | "1/x^2" | "√x" | "1/√x" | "1/(2√x)"}
+  function fmtTerm(c, s, first) {
+    if (c === 0) return "";
+    var sign = c < 0 ? "−" : (first ? "" : "+");
+    var a = Math.abs(c);
+    var coef = (a === 1 && s !== "") ? "" : String(a);
+    var body;
+    switch (s) {
+      case "": body = String(a); break;
+      case "x": body = coef + "x"; break;
+      case "x^2": body = coef + "x<sup>2</sup>"; break;
+      case "x^3": body = coef + "x<sup>3</sup>"; break;
+      case "√x": body = coef + "√x"; break;
+      case "1/x": body = coef + "/x"; break;
+      case "1/x^2": body = coef + "/x<sup>2</sup>"; break;
+      case "1/√x": body = coef + "/√x"; break;
+      case "1/(2√x)": body = coef + "/(2√x)"; break;
+      default: body = coef + s;
+    }
+    return (first ? sign : " " + sign + " ") + body;
+  }
+  function poly(terms) {
+    var out = "", firstDone = false;
+    for (var i = 0; i < terms.length; i++) {
+      var t = terms[i];
+      if (t.c === 0) continue;
+      out += fmtTerm(t.c, t.s, !firstDone);
+      firstDone = true;
+    }
+    return out === "" ? "0" : out;
+  }
+
+  // ---- plantillas ----
+  // Devuelven { fDisp, fNum, trueDisp, trueNum, xs (puntos de prueba), corrs:[{disp,num,tipo}] }
+  function piso() {
+    if (Math.random() < 0.5) {
+      // cuadrática a x^2 + b x + c
+      var a = nz(1, 4), b = nz(-5, 5), c = ri(-6, 6);
+      var f = function (x) { return a * x * x + b * x + c; };
+      var fDisp = poly([{ c: a, s: "x^2" }, { c: b, s: "x" }, { c: c, s: "" }]);
+      var tD = poly([{ c: 2 * a, s: "x" }, { c: b, s: "" }]);
+      var tN = function (x) { return 2 * a * x + b; };
+      var corrs = [
+        { disp: poly([{ c: a, s: "x" }, { c: b, s: "" }]), num: function (x) { return a * x + b; }, tipo: "exponente" },
+        { disp: poly([{ c: 2 * a, s: "x" }]), num: function (x) { return 2 * a * x; }, tipo: "termino_faltante" },
+        { disp: poly([{ c: 2 * a, s: "x" }, { c: b, s: "" }, { c: c, s: "" }]), num: function (x) { return 2 * a * x + b + c; }, tipo: "constante", skip: c === 0 }
+      ];
+      return { fDisp: fDisp, fNum: f, trueDisp: tD, trueNum: tN, xs: [1, 2, 3, -1, -2], corrs: corrs };
+    } else {
+      // cúbica a x^3 + b x^2 + c x + d
+      var A = nz(1, 3), B = nz(-3, 3), C = nz(-4, 4), D = ri(-5, 5);
+      var f2 = function (x) { return A * x * x * x + B * x * x + C * x + D; };
+      var fDisp2 = poly([{ c: A, s: "x^3" }, { c: B, s: "x^2" }, { c: C, s: "x" }, { c: D, s: "" }]);
+      var tD2 = poly([{ c: 3 * A, s: "x^2" }, { c: 2 * B, s: "x" }, { c: C, s: "" }]);
+      var tN2 = function (x) { return 3 * A * x * x + 2 * B * x + C; };
+      var corrs2 = [
+        { disp: poly([{ c: A, s: "x^2" }, { c: B, s: "x" }, { c: C, s: "" }]), num: function (x) { return A * x * x + B * x + C; }, tipo: "exponente" },
+        { disp: poly([{ c: 3 * A, s: "x^2" }, { c: 2 * B, s: "x" }]), num: function (x) { return 3 * A * x * x + 2 * B * x; }, tipo: "termino_faltante" },
+        { disp: poly([{ c: 3 * A, s: "x^2" }, { c: 2 * B, s: "x" }, { c: C, s: "" }, { c: D, s: "" }]), num: function (x) { return 3 * A * x * x + 2 * B * x + C + D; }, tipo: "constante", skip: D === 0 }
+      ];
+      return { fDisp: fDisp2, fNum: f2, trueDisp: tD2, trueNum: tN2, xs: [1, 2, 3, -1, -2], corrs: corrs2 };
+    }
+  }
+
+  function central() {
+    var r = Math.random();
+    if (r < 0.34) {
+      // a x^2 + b√x
+      var a = nz(1, 4), b = nz(2, 6);
+      var f = function (x) { return a * x * x + b * Math.sqrt(x); };
+      var fDisp = poly([{ c: a, s: "x^2" }]) + " + " + (b === 1 ? "" : b) + "√x";
+      var tD = poly([{ c: 2 * a, s: "x" }]) + " + " + b + "/(2√x)";
+      var tN = function (x) { return 2 * a * x + b / (2 * Math.sqrt(x)); };
+      var corrs = [
+        { disp: poly([{ c: 2 * a, s: "x" }]) + " + " + b + "/√x", num: function (x) { return 2 * a * x + b / Math.sqrt(x); }, tipo: "raiz" },
+        { disp: poly([{ c: 2 * a, s: "x" }]), num: function (x) { return 2 * a * x; }, tipo: "termino_faltante" },
+        { disp: poly([{ c: a, s: "x" }]) + " + " + b + "/(2√x)", num: function (x) { return a * x + b / (2 * Math.sqrt(x)); }, tipo: "exponente" }
+      ];
+      return { fDisp: fDisp, fNum: f, trueDisp: tD, trueNum: tN, xs: [1, 2, 4], corrs: corrs };
+    } else if (r < 0.67) {
+      // a/x + b x
+      var A = nz(2, 8), Bc = nz(1, 5);
+      var f2 = function (x) { return A / x + Bc * x; };
+      var fDisp2 = A + "/x + " + (Bc === 1 ? "x" : Bc + "x");
+      var tD2 = "−" + A + "/x<sup>2</sup> + " + Bc;
+      var tN2 = function (x) { return -A / (x * x) + Bc; };
+      var corrs2 = [
+        { disp: A + "/x<sup>2</sup> + " + Bc, num: function (x) { return A / (x * x) + Bc; }, tipo: "signo" },
+        { disp: "−" + A + "/x + " + Bc, num: function (x) { return -A / x + Bc; }, tipo: "exponente" },
+        { disp: "−" + A + "/x<sup>2</sup>", num: function (x) { return -A / (x * x); }, tipo: "termino_faltante" }
+      ];
+      return { fDisp: fDisp2, fNum: f2, trueDisp: tD2, trueNum: tN2, xs: [1, 2, 3], corrs: corrs2 };
+    } else {
+      // a√x + c
+      var a3 = nz(2, 8), c3 = nz(-6, 6);
+      var f3 = function (x) { return a3 * Math.sqrt(x) + c3; };
+      var fDisp3 = (a3 === 1 ? "" : a3) + "√x " + (c3 < 0 ? "− " + Math.abs(c3) : "+ " + c3);
+      var tD3 = a3 + "/(2√x)";
+      var tN3 = function (x) { return a3 / (2 * Math.sqrt(x)); };
+      var corrs3 = [
+        { disp: a3 + "/√x", num: function (x) { return a3 / Math.sqrt(x); }, tipo: "raiz" },
+        { disp: a3 + "/(2√x) " + (c3 < 0 ? "− " + Math.abs(c3) : "+ " + c3), num: function (x) { return a3 / (2 * Math.sqrt(x)) + c3; }, tipo: "constante" },
+        { disp: (2 * a3) + "√x", num: function (x) { return 2 * a3 * Math.sqrt(x); }, tipo: "exponente" }
+      ];
+      return { fDisp: fDisp3, fNum: f3, trueDisp: tD3, trueNum: tN3, xs: [1, 2, 4], corrs: corrs3 };
+    }
+  }
+
+  function lin(c, d) { // "cx + d" con signos
+    var cs = (c === 1 ? "x" : (c === -1 ? "−x" : c + "x"));
+    if (d === 0) return cs;
+    return cs + (d < 0 ? " − " + Math.abs(d) : " + " + d);
+  }
+  function techo() {
+    var r = Math.random();
+    if (r < 0.34) {
+      // producto (ax+b)(cx+d), forma de regla del producto
+      var a = nz(1, 4), b = nz(-5, 5), c = nz(1, 4), d = nz(-5, 5);
+      var f = function (x) { return (a * x + b) * (c * x + d); };
+      var fDisp = "(" + lin(a, b) + ")(" + lin(c, d) + ")";
+      var tD = "(" + a + ")(" + lin(c, d) + ") + (" + lin(a, b) + ")(" + c + ")";
+      var tN = function (x) { return a * (c * x + d) + (a * x + b) * c; };
+      var corrs = [
+        { disp: "(" + a + ")(" + c + ")", num: function (x) { return a * c; }, tipo: "producto_derivadas" },
+        { disp: "(" + a + ")(" + lin(c, d) + ")", num: function (x) { return a * (c * x + d); }, tipo: "termino_faltante" },
+        { disp: "(" + a + ")(" + lin(c, d) + ") − (" + lin(a, b) + ")(" + c + ")", num: function (x) { return a * (c * x + d) - (a * x + b) * c; }, tipo: "signo" }
+      ];
+      return { fDisp: fDisp, fNum: f, trueDisp: tD, trueNum: tN, xs: [1.5, 2.5, 3.5], corrs: corrs };
+    } else if (r < 0.67) {
+      // cociente (ax+b)/(cx+d)
+      var A = nz(1, 4), B = nz(-5, 5), C = nz(1, 4), Dd = nz(-5, 5);
+      // evitar denominador 0 en puntos de prueba
+      var xs = [1.5, 2.5, 3.5].filter(function (x) { return Math.abs(C * x + Dd) > 0.3; });
+      if (xs.length < 2) xs = [0.7, 1.3, 1.9].filter(function (x) { return Math.abs(C * x + Dd) > 0.3; });
+      var f2 = function (x) { return (A * x + B) / (C * x + Dd); };
+      var fDisp2 = "(" + lin(A, B) + ") / (" + lin(C, Dd) + ")";
+      var den = "(" + lin(C, Dd) + ")<sup>2</sup>";
+      var tD2 = "[(" + A + ")(" + lin(C, Dd) + ") − (" + lin(A, B) + ")(" + C + ")] / " + den;
+      var tN2 = function (x) { var g = C * x + Dd; return (A * g - (A * x + B) * C) / (g * g); };
+      var corrs2 = [
+        { disp: "[(" + A + ")(" + lin(C, Dd) + ") + (" + lin(A, B) + ")(" + C + ")] / " + den, num: function (x) { var g = C * x + Dd; return (A * g + (A * x + B) * C) / (g * g); }, tipo: "signo" },
+        { disp: "[(" + A + ")(" + lin(C, Dd) + ") − (" + lin(A, B) + ")(" + C + ")] / (" + lin(C, Dd) + ")", num: function (x) { var g = C * x + Dd; return (A * g - (A * x + B) * C) / g; }, tipo: "sin_cuadrado" },
+        { disp: "[(" + lin(A, B) + ")(" + C + ") − (" + A + ")(" + lin(C, Dd) + ")] / " + den, num: function (x) { var g = C * x + Dd; return ((A * x + B) * C - A * g) / (g * g); }, tipo: "orden" }
+      ];
+      return { fDisp: fDisp2, fNum: f2, trueDisp: tD2, trueNum: tN2, xs: xs, corrs: corrs2 };
+    } else {
+      // producto (x^2 + a)(bx + c)
+      var aa = nz(-6, 6), bb = nz(1, 4), cc = nz(-5, 5);
+      var f3 = function (x) { return (x * x + aa) * (bb * x + cc); };
+      var fDisp3 = "(x<sup>2</sup> " + (aa < 0 ? "− " + Math.abs(aa) : "+ " + aa) + ")(" + lin(bb, cc) + ")";
+      var tD3 = "(2x)(" + lin(bb, cc) + ") + (x<sup>2</sup> " + (aa < 0 ? "− " + Math.abs(aa) : "+ " + aa) + ")(" + bb + ")";
+      var tN3 = function (x) { return (2 * x) * (bb * x + cc) + (x * x + aa) * bb; };
+      var corrs3 = [
+        { disp: "(2x)(" + bb + ")", num: function (x) { return 2 * x * bb; }, tipo: "producto_derivadas" },
+        { disp: "(2x)(" + lin(bb, cc) + ")", num: function (x) { return 2 * x * (bb * x + cc); }, tipo: "termino_faltante" },
+        { disp: "(2x)(" + lin(bb, cc) + ") − (x<sup>2</sup> " + (aa < 0 ? "− " + Math.abs(aa) : "+ " + aa) + ")(" + bb + ")", num: function (x) { return 2 * x * (bb * x + cc) - (x * x + aa) * bb; }, tipo: "signo" }
+      ];
+      return { fDisp: fDisp3, fNum: f3, trueDisp: tD3, trueNum: tN3, xs: [1.5, 2.5, 3.5], corrs: corrs3 };
+    }
+  }
+
+  var ERRLABEL = {
+    exponente: "No se bajó o aplicó bien el exponente",
+    termino_faltante: "Falta un término de la derivada",
+    constante: "La constante no desaparece",
+    signo: "Error de signo",
+    raiz: "Mal la derivada de la raíz",
+    producto_derivadas: "Usó f ′·g ′ en vez de f ′g + f g ′",
+    sin_cuadrado: "No elevó el denominador al cuadrado",
+    orden: "Invirtió el orden del numerador"
+  };
+
+  function diff(num1, num2, xs) {
+    for (var i = 0; i < xs.length; i++) {
+      var x = xs[i];
+      var a = num1(x), b = num2(x);
+      if (isFinite(a) && isFinite(b) && Math.abs(a - b) > 1e-6 * (1 + Math.abs(a))) return true;
+    }
+    return false;
+  }
+
+  function generar(nivel) {
+    var t = nivel === "piso" ? piso() : nivel === "central" ? central() : techo();
+    var correcto = Math.random() < 0.5;
+    if (correcto) {
+      return { nivel: nivel, fDisp: t.fDisp, fNum: t.fNum, propDisp: t.trueDisp, propNum: t.trueNum, correcto: true, errorTipo: null, trueDisp: t.trueDisp, xs: t.xs };
+    }
+    var cands = t.corrs.filter(function (c) { return !c.skip && diff(c.num, t.trueNum, t.xs); });
+    if (cands.length === 0) {
+      // sin corrupción válida: entregar correcto para no mentir
+      return { nivel: nivel, fDisp: t.fDisp, fNum: t.fNum, propDisp: t.trueDisp, propNum: t.trueNum, correcto: true, errorTipo: null, trueDisp: t.trueDisp, xs: t.xs };
+    }
+    var c = pick(cands);
+    return { nivel: nivel, fDisp: t.fDisp, fNum: t.fNum, propDisp: c.disp, propNum: c.num, correcto: false, errorTipo: c.tipo, trueDisp: t.trueDisp, xs: t.xs };
+  }
+
+  var api = { generar: generar, ERRLABEL: ERRLABEL };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  root.DerivEngine = api;
+})(typeof window !== "undefined" ? window : this);
+</script>
+<script>
+(function(){
+  "use strict";
+  // ====== CONFIG ======
+  var SHEETS_URL = "https://script.google.com/macros/s/AKfycbyERurWMrj-rRFNgHvvJ-C0xqMpIHYjXqmGiIO1dhzG-SEAf-z_Bt4SGrZRdb45at3b/exec";
+  var MULT = { piso:3, central:4, techo:6 };
+  var MBONUS = { 5:50, 10:75, 15:150, 20:300 };
+  var QBASE = 10, ERRBONUS = 5;
+  // ====================
+
+  var E = window.DerivEngine;
+  var nivel = "piso", mult = 3, aciertos = 0, puntos = 0, startT = 0, timer = null, cur = null, best = {};
+  var LABELS = { piso:"Principiante", central:"Aprendiz", techo:"Experto" };
+  var LVLD = { piso:"Principiante: regla de la potencia y sumas.", central:"Aprendiz: raíz y potencia negativa.", techo:"Experto: producto y cociente concretos." };
+  var $ = function(id){ return document.getElementById(id); };
+  function fmtT(ms){ var s=Math.floor(ms/1000); return Math.floor(s/60)+":"+("0"+(s%60)).slice(-2); }
+
+  try{ best = JSON.parse(localStorage.getItem("retoDeriv_best")||"{}"); }catch(e){ best = {}; }
+  function showBest(){ var b = best[nivel]||0; $("best").textContent = b ? ("Tu mejor puntaje en "+LABELS[nivel]+": "+b) : ""; }
+
+  Array.prototype.forEach.call(document.querySelectorAll("#levels button"), function(b){
+    b.onclick = function(){
+      document.querySelectorAll("#levels button").forEach(function(x){ x.classList.remove("sel"); });
+      b.classList.add("sel"); nivel = b.getAttribute("data-lvl"); mult = MULT[nivel];
+      $("lvlDesc").textContent = LVLD[nivel]; showBest();
+    };
+  });
+
+  function updateHud(){ $("hScore").textContent = aciertos; $("hPts").textContent = puntos; }
+
+  $("startBtn").onclick = function(){
+    var cuenta = ($("cuenta").value||"").trim();
+    var nombre = ($("nombre").value||"").trim();
+    if(!/^\d{9}$/.test(cuenta)){ $("startErr").textContent = "El número de cuenta debe tener 9 dígitos."; return; }
+    if(!nombre){ $("startErr").textContent = "Escribe tu nombre."; return; }
+    $("startErr").textContent = "";
+    aciertos = 0; puntos = 0; startT = Date.now(); mult = MULT[nivel];
+    $("inicio").classList.add("hidden"); $("fin").classList.add("hidden"); $("juego").classList.remove("hidden");
+    $("hLvl").textContent = LABELS[nivel]; updateHud();
+    if(timer) clearInterval(timer);
+    timer = setInterval(function(){ $("hTime").textContent = fmtT(Date.now()-startT); }, 500);
+    next();
+  };
+
+  function next(){
+    $("qBanner").textContent = ""; $("errStep").classList.add("hidden"); $("judge").classList.remove("hidden");
+    cur = E.generar(nivel);
+    $("qF").innerHTML = "f(x) = " + cur.fDisp;
+    $("qD").innerHTML = "f ′(x) = " + cur.propDisp;
+  }
+
+  function milestone(){
+    if(MBONUS[aciertos]){ puntos += MBONUS[aciertos]*mult; updateHud();
+      $("qBanner").style.color="var(--accent)"; $("qBanner").textContent = "¡Meta "+aciertos+"!  +"+(MBONUS[aciertos]*mult)+" puntos"; return true; }
+    if(aciertos>20){ $("qBanner").style.color="var(--accent)"; $("qBanner").textContent = "★ racha "+aciertos; }
+    return false;
+  }
+
+  function judge(said){
+    if(said === cur.correcto){
+      aciertos++; puntos += QBASE*mult; updateHud();
+      var hit = milestone();
+      if(!cur.correcto){ askError(); }
+      else { setTimeout(next, hit?850:250); }
+    } else {
+      gameOver();
+    }
+  }
+
+  function askError(){
+    $("judge").classList.add("hidden");
+    var box = $("errChips"); box.innerHTML = "";
+    var right = cur.errorTipo, all = Object.keys(E.ERRLABEL), opts = [right];
+    while(opts.length < 4 && opts.length < all.length){ var c = all[Math.floor(Math.random()*all.length)]; if(opts.indexOf(c)<0) opts.push(c); }
+    opts.sort(function(){ return Math.random()-0.5; });
+    opts.forEach(function(k){
+      var b = document.createElement("button"); b.innerHTML = E.ERRLABEL[k];
+      b.onclick = function(){
+        if(k === right){ puntos += ERRBONUS*mult; updateHud(); $("qBanner").style.color="var(--ok)"; $("qBanner").textContent="✔ "+E.ERRLABEL[right]+"  +"+(ERRBONUS*mult); setTimeout(next, 950); }
+        else { gameOver("error", k); }
+      };
+      box.appendChild(b);
+    });
+    $("errStep").classList.remove("hidden");
+  }
+
+  function gameOver(reason, picked){
+    if(timer) clearInterval(timer);
+    var elapsed = Date.now()-startT;
+    if(!best[nivel] || puntos>best[nivel]){ best[nivel]=puntos; try{ localStorage.setItem("retoDeriv_best", JSON.stringify(best)); }catch(e){} }
+    $("juego").classList.add("hidden"); $("fin").classList.remove("hidden");
+    $("finPts").textContent = puntos; $("finScore").textContent = aciertos;
+    $("finLvl").textContent = LABELS[nivel]; $("finTime").textContent = fmtT(elapsed);
+    var cuerpo;
+    if(reason === "error"){
+      cuerpo = "<div style='margin-top:6px'>Detectaste bien que la derivada <b>no</b> era correcta, pero fallaste el motivo.</div>"+
+        "<div class='muted' style='margin-top:6px'>Elegiste: "+E.ERRLABEL[picked]+"<br>El error era: "+E.ERRLABEL[cur.errorTipo]+
+        "<br>Derivada correcta: f ′(x) = "+cur.trueDisp+"</div>";
+    } else {
+      var verdad = cur.correcto ? "La derivada mostrada <b>sí</b> era correcta." : "La derivada mostrada <b>no</b> era correcta.";
+      var expl = cur.correcto ? "" : ("<div class='muted' style='margin-top:6px'>Derivada correcta: f ′(x) = "+cur.trueDisp+(cur.errorTipo?("<br>Error presentado: "+E.ERRLABEL[cur.errorTipo]):"")+"</div>");
+      cuerpo = "<div style='margin-top:6px'>"+verdad+"</div>"+expl;
+    }
+    $("finReveal").innerHTML = "<div class='card' style='background:transparent'>"+
+      "<div class='muted' style='font-size:.85rem'>Último reactivo</div>"+
+      "<div style='font-size:1.15rem; margin:4px 0'>f(x) = "+cur.fDisp+"</div>"+
+      "<div style='font-size:1.15rem; margin:4px 0'>propuesta: f ′(x) = "+cur.propDisp+"</div>"+
+      cuerpo+"</div>";
+    window._result = {
+      cuenta:($("cuenta").value||"").trim(), nombre:($("nombre").value||"").trim(), grupo:($("grupo").value||"").trim(),
+      nivel:LABELS[nivel], aciertos:aciertos, puntos:puntos, tiempo:Math.round(elapsed/1000)
+    };
+    enviar(true);
+  }
+
+  function enviar(auto){
+    var r = window._result||{};
+    if(!SHEETS_URL){ $("sendMsg").style.color="var(--muted)"; $("sendMsg").textContent = "Registro no configurado. Puntaje: "+r.puntos; return; }
+    $("sendMsg").style.color="var(--muted)"; $("sendMsg").textContent = "Registrando…";
+    var body = new URLSearchParams({ cuenta:r.cuenta, nombre:r.nombre, grupo:r.grupo, nivel:r.nivel,
+      aciertos:r.aciertos, puntos:r.puntos, tiempo:r.tiempo, fecha:new Date().toISOString() });
+    fetch(SHEETS_URL, { method:"POST", mode:"no-cors", body:body })
+      .then(function(){ $("sendMsg").style.color="var(--ok)"; $("sendMsg").textContent = "Registro enviado ("+r.puntos+" puntos)."; })
+      .catch(function(){ $("sendMsg").style.color="var(--bad)"; $("sendMsg").textContent = "No se pudo registrar. Usa Reenviar registro."; });
+  }
+
+  $("bOk").onclick = function(){ judge(true); };
+  $("bBad").onclick = function(){ judge(false); };
+  $("againBtn").onclick = function(){ $("fin").classList.add("hidden"); $("inicio").classList.remove("hidden"); showBest(); };
+  $("resendBtn").onclick = function(){ enviar(false); };
+
+  showBest();
+})();
+</script>
+</body>
+</html>
