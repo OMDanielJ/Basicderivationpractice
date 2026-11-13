@@ -55,7 +55,7 @@
   <!-- INICIO -->
   <div id="inicio">
     <h1>Reto de derivadas</h1>
-    <p class="sub">¿Está bien derivada? Decide correcta o incorrecta. La partida termina en el primer error de juicio.</p>
+    <p class="sub">¿Está bien derivada? Decide correcta o incorrecta, y si es incorrecta, identifica el error. La partida termina con el primer fallo.</p>
     <div class="card">
       <label for="cuenta">Número de cuenta (9 dígitos)</label>
       <input type="text" id="cuenta" inputmode="numeric" maxlength="9" placeholder="Ej. 312345678" autocomplete="off">
@@ -405,29 +405,36 @@
     opts.forEach(function(k){
       var b = document.createElement("button"); b.innerHTML = E.ERRLABEL[k];
       b.onclick = function(){
-        if(k === right){ puntos += ERRBONUS*mult; updateHud(); $("qBanner").style.color="var(--ok)"; $("qBanner").textContent="✔ "+E.ERRLABEL[right]+"  +"+(ERRBONUS*mult); }
-        else { $("qBanner").style.color="var(--bad)"; $("qBanner").textContent="El error era: "+E.ERRLABEL[right]; }
-        setTimeout(next, 950);
+        if(k === right){ puntos += ERRBONUS*mult; updateHud(); $("qBanner").style.color="var(--ok)"; $("qBanner").textContent="✔ "+E.ERRLABEL[right]+"  +"+(ERRBONUS*mult); setTimeout(next, 950); }
+        else { gameOver("error", k); }
       };
       box.appendChild(b);
     });
     $("errStep").classList.remove("hidden");
   }
 
-  function gameOver(){
+  function gameOver(reason, picked){
     if(timer) clearInterval(timer);
     var elapsed = Date.now()-startT;
     if(!best[nivel] || puntos>best[nivel]){ best[nivel]=puntos; try{ localStorage.setItem("retoDeriv_best", JSON.stringify(best)); }catch(e){} }
     $("juego").classList.add("hidden"); $("fin").classList.remove("hidden");
     $("finPts").textContent = puntos; $("finScore").textContent = aciertos;
     $("finLvl").textContent = LABELS[nivel]; $("finTime").textContent = fmtT(elapsed);
-    var verdad = cur.correcto ? "La derivada mostrada <b>sí</b> era correcta." : "La derivada mostrada <b>no</b> era correcta.";
-    var expl = cur.correcto ? "" : ("<div class='muted' style='margin-top:6px'>Derivada correcta: f ′(x) = "+cur.trueDisp+(cur.errorTipo?("<br>Error presentado: "+E.ERRLABEL[cur.errorTipo]):"")+"</div>");
+    var cuerpo;
+    if(reason === "error"){
+      cuerpo = "<div style='margin-top:6px'>Detectaste bien que la derivada <b>no</b> era correcta, pero fallaste el motivo.</div>"+
+        "<div class='muted' style='margin-top:6px'>Elegiste: "+E.ERRLABEL[picked]+"<br>El error era: "+E.ERRLABEL[cur.errorTipo]+
+        "<br>Derivada correcta: f ′(x) = "+cur.trueDisp+"</div>";
+    } else {
+      var verdad = cur.correcto ? "La derivada mostrada <b>sí</b> era correcta." : "La derivada mostrada <b>no</b> era correcta.";
+      var expl = cur.correcto ? "" : ("<div class='muted' style='margin-top:6px'>Derivada correcta: f ′(x) = "+cur.trueDisp+(cur.errorTipo?("<br>Error presentado: "+E.ERRLABEL[cur.errorTipo]):"")+"</div>");
+      cuerpo = "<div style='margin-top:6px'>"+verdad+"</div>"+expl;
+    }
     $("finReveal").innerHTML = "<div class='card' style='background:transparent'>"+
       "<div class='muted' style='font-size:.85rem'>Último reactivo</div>"+
       "<div style='font-size:1.15rem; margin:4px 0'>f(x) = "+cur.fDisp+"</div>"+
       "<div style='font-size:1.15rem; margin:4px 0'>propuesta: f ′(x) = "+cur.propDisp+"</div>"+
-      "<div style='margin-top:6px'>"+verdad+"</div>"+expl+"</div>";
+      cuerpo+"</div>";
     window._result = {
       cuenta:($("cuenta").value||"").trim(), nombre:($("nombre").value||"").trim(), grupo:($("grupo").value||"").trim(),
       nivel:LABELS[nivel], aciertos:aciertos, puntos:puntos, tiempo:Math.round(elapsed/1000)
